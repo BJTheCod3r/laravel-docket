@@ -1,0 +1,76 @@
+{
+    "name": "bjthecod3r/laravel-docket",
+    "description": "Reporting and change management for Laravel: threaded reports with statuses, ownership, attachments, notifications and reviewable change proposals for any Eloquent model.",
+    "keywords": [
+        "laravel",
+        "eloquent",
+        "reports",
+        "issues",
+        "tickets",
+        "workflow",
+        "state-machine",
+        "change-management",
+        "approvals",
+        "notifications"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Bolaji Ajani",
+            "email": "bolaji@bolaji.dev"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/database": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/events": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/filesystem": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/http": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/notifications": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/validation": "^11.0 || ^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.12",
+        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+        "pestphp/pest": "^3.0 || ^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0 || ^4.1",
+        "phpunit/phpunit": "^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "BJTheCod3r\\Docket\\": "src/",
+            "BJTheCod3r\\Docket\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BJTheCod3r\\Docket\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=1G"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "BJTheCod3r\\Docket\\DocketServiceProvider"
+            ],
+            "aliases": {
+                "Docket": "BJTheCod3r\\Docket\\Facades\\Docket"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

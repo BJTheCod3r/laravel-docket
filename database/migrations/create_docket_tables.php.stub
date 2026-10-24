@@ -1,0 +1,283 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    protected string $prefix;
+
+    protected string $keyType;
+
+    protected string $morphKeyType;
+
+    public function __construct()
+    {
+        $this->prefix = (string) config('docket.table_prefix', 'docket_');
+        $this->keyType = (string) config('docket.key_type', 'ulid');
+        $this->morphKeyType = (string) config('docket.morph_key_type', 'id');
+    }
+
+    public function up(): void
+    {
+        Schema::create($this->prefix.'sequences', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->unsignedBigInteger('value')->default(0);
+        });
+
+        Schema::create($this->prefix.'reports', function (Blueprint $table) {
+            $this->primary($table);
+            $table->string('reference')->unique();
+            $this->foreign($table, 'parent_id', nullable: true);
+            $this->foreign($table, 'root_id', nullable: true, constrained: false);
+            $table->unsignedTinyInteger('depth')->default(0);
+            $table->string('kind')->index();
+            $table->string('visibility')->index();
+            $table->string('status')->index();
+            $table->string('previous_status')->nullable();
+            $table->timestamp('status_changed_at')->nullable();
+            $this->morph($table, 'owner');
+            $this->morph($table, 'reporter');
+            $this->stringMorphs($table, 'subject', nullable: true); // your models or a Docket Service/Report
+            $this->morph($table, 'assignee');
+            $table->string('title')->nullable();
+            $table->text('description')->nullable();
+            $table->json('meta')->nullable();
+            $table->string('tenant_id')->nullable()->index();
+            $table->smallInteger('priority')->nullable();
+            $table->timestamp('due_at')->nullable();
+            $table->timestamp('resolved_at')->nullable();
+            $table->timestamp('closed_at')->nullable();
+            $table->timestamp('locked_at')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->index(['owner_type', 'owner_id', 'status'], $this->prefix.'reports_owner_status_index');
+            $table->index(['subject_type', 'subject_id', 'created_at'], $this->prefix.'reports_subject_created_index');
+            $table->index(['root_id', 'created_at'], $this->prefix.'reports_root_created_index');
+            $table->index(['status', 'due_at'], $this->prefix.'reports_status_due_index');
+        });
+
+        Schema::create($this->prefix.'status_transitions', function (Blueprint $table) {
+            $this->primary($table);
+            $this->foreign($table, 'report_id', references: 'reports');
+            $table->string('from')->nullable();
+            $table->string('to');
+            $table->string('from_category')->nullable();
+            $table->string('to_category');
+            $this->morph($table, 'actor');
+            $table->text('reason')->nullable();
+            $table->json('meta')->nullable();
+            $table->boolean('via_rollup')->default(false);
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create($this->prefix.'revisions', function (Blueprint $table) {
+            $this->primary($table);
+            $this->foreign($table, 'report_id', references: 'reports');
+            $this->morph($table, 'editor');
+            $table->json('changes');
+            $table->text('reason')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create($this->prefix.'services', function (Blueprint $table) {
+            $this->primary($table);
+            $table->string('key')->unique();
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('email')->nullable();
+            $this->morph($table, 'owner');
+            $table->boolean('is_active')->default(true);
+            $table->json('meta')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create($this->prefix.'report_service', function (Blueprint $table) {
+            $this->foreign($table, 'report_id', references: 'reports');
+            $this->foreign($table, 'service_id', references: 'services');
+            $table->string('role')->nullable();
+            $table->timestamps();
+
+            $table->primary(['report_id', 'service_id']);
+        });
+
+        Schema::create($this->prefix.'subscriptions', function (Blueprint $table) {
+            $this->primary($table);
+            $this->morph($table, 'subscriber', nullable: false);
+            $table->string('subscribable_type');
+            $table->string('subscribable_id')->nullable();
+            $table->json('events')->nullable();
+            $table->json('channels')->nullable();
+            $table->json('kinds')->nullable();
+            $table->json('except_kinds')->nullable();
+            $table->timestamp('muted_until')->nullable();
+            $table->timestamps();
+
+            $table->index(['subscribable_type', 'subscribable_id'], $this->prefix.'subscriptions_subscribable_index');
+        });
+
+        Schema::create($this->prefix.'notification_settings', function (Blueprint $table) {
+            $this->primary($table);
+            $this->morph($table, 'notifiable', nullable: false, index: $this->prefix.'settings_notifiable_index');
+            $table->string('timezone')->nullable();
+            $table->string('quiet_from', 5)->nullable();
+            $table->string('quiet_to', 5)->nullable();
+            $table->json('quiet_channels')->nullable();
+            $table->boolean('digest_enabled')->nullable(); // null = docket.notifications.digest.enabled
+            $table->unsignedSmallInteger('digest_window_minutes')->nullable();
+            $table->json('preferences')->nullable(); // {event_key: {channel: enabled}}
+            $table->timestamps();
+
+            $table->unique(['notifiable_type', 'notifiable_id'], $this->prefix.'settings_notifiable_unique');
+        });
+
+        Schema::create($this->prefix.'mutes', function (Blueprint $table) {
+            $this->primary($table);
+            $table->string('direction')->default('about');
+            $this->stringMorphs($table, 'scope', nullable: true); // a Service, Report, Team or User
+            $table->json('event_keys')->nullable();
+            $table->json('kinds')->nullable();
+            $table->json('channels')->nullable();
+            $table->smallInteger('min_priority')->nullable();
+            $table->string('behaviour')->default('drop');
+            $table->timestamp('starts_at');
+            $table->timestamp('ends_at')->nullable();
+            $table->text('reason')->nullable();
+            $this->morph($table, 'created_by');
+            $table->timestamps();
+
+            $table->index(['scope_type', 'scope_id', 'starts_at', 'ends_at'], $this->prefix.'mutes_scope_window_index');
+        });
+
+        Schema::create($this->prefix.'attachments', function (Blueprint $table) {
+            $this->primary($table);
+            $table->string('attachable_type');
+            $table->string('attachable_id');
+            $table->string('collection')->index();
+            $table->string('driver');
+            $table->string('disk')->nullable();
+            $table->string('path')->nullable();
+            $table->string('external_type')->nullable();
+            $table->string('external_id')->nullable();
+            $table->string('name');
+            $table->string('mime');
+            $table->unsignedBigInteger('size')->default(0);
+            $table->string('checksum')->nullable()->index();
+            $table->json('variants')->nullable();
+            $table->json('meta')->nullable();
+            $table->smallInteger('order')->default(0);
+            $table->string('state')->default('live')->index();
+            $table->timestamps();
+
+            $table->index(['attachable_type', 'attachable_id'], $this->prefix.'attachments_attachable_index');
+        });
+
+        Schema::create($this->prefix.'proposals', function (Blueprint $table) {
+            $this->primary($table);
+            $this->foreign($table, 'report_id', references: 'reports');
+            $this->morph($table, 'target', nullable: false);
+            $table->json('changes')->nullable();
+            $table->json('file_changes')->nullable();
+            $table->json('original')->nullable();
+            $table->string('strategy')->default('patch');
+            $table->string('state')->default('submitted')->index();
+            $table->unsignedSmallInteger('required_approvals')->default(1);
+            $table->json('applied_snapshot')->nullable();
+            $table->json('conflicts')->nullable();
+            $table->timestamp('applied_at')->nullable();
+            $table->timestamp('reverted_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create($this->prefix.'proposal_approvals', function (Blueprint $table) {
+            $this->primary($table);
+            $this->foreign($table, 'proposal_id', references: 'proposals');
+            $this->morph($table, 'approver', nullable: false);
+            $table->string('decision');
+            $table->text('comment')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create($this->prefix.'meta_index', function (Blueprint $table) {
+            $this->primary($table);
+            $this->foreign($table, 'report_id', references: 'reports');
+            $table->string('key')->index();
+            $table->string('value_string')->nullable()->index();
+            $table->decimal('value_number', 20, 6)->nullable()->index();
+            $table->boolean('value_bool')->nullable();
+        });
+    }
+
+    public function down(): void
+    {
+        foreach ([
+            'meta_index', 'proposal_approvals', 'proposals', 'attachments', 'mutes',
+            'notification_settings', 'subscriptions',
+            'report_service', 'services', 'revisions', 'status_transitions',
+            'reports', 'sequences',
+        ] as $table) {
+            Schema::dropIfExists($this->prefix.$table);
+        }
+    }
+
+    /**
+     * An explicit primary command (not the `->primary()` modifier) so the key exists
+     * before any self-referencing foreign key on the same table; Postgres requires it.
+     */
+    protected function primary(Blueprint $table): void
+    {
+        match ($this->keyType) {
+            'ulid' => $table->ulid('id'),
+            'uuid' => $table->uuid('id'),
+            default => $table->id(),
+        };
+
+        if ($this->keyType !== 'id') {
+            $table->primary('id');
+        }
+    }
+
+    protected function foreign(Blueprint $table, string $column, string $references = 'reports', bool $nullable = false, bool $constrained = true): void
+    {
+        $definition = match ($this->keyType) {
+            'ulid' => $table->ulid($column),
+            'uuid' => $table->uuid($column),
+            default => $table->unsignedBigInteger($column),
+        };
+
+        $definition->nullable($nullable);
+
+        if ($constrained) {
+            $table->foreign($column)->references('id')->on($this->prefix.$references)->cascadeOnDelete();
+        } else {
+            $table->index($column);
+        }
+    }
+
+    protected function morph(Blueprint $table, string $name, bool $nullable = true, ?string $index = null): void
+    {
+        match ([$this->morphKeyType, $nullable]) {
+            ['ulid', true] => $table->nullableUlidMorphs($name, $index),
+            ['ulid', false] => $table->ulidMorphs($name, $index),
+            ['uuid', true] => $table->nullableUuidMorphs($name, $index),
+            ['uuid', false] => $table->uuidMorphs($name, $index),
+            ['string', true], ['string', false] => $this->stringMorphs($table, $name, $nullable, $index),
+            [$this->morphKeyType, true] => $table->nullableMorphs($name, $index),
+            default => $table->morphs($name, $index),
+        };
+    }
+
+    /**
+     * String ids fit any key type (int, ulid, uuid), so columns that may point at either
+     * your models or Docket's own always use them. Elsewhere `morph_key_type` decides.
+     */
+    protected function stringMorphs(Blueprint $table, string $name, bool $nullable, ?string $index = null): void
+    {
+        $table->string("{$name}_type")->nullable($nullable);
+        $table->string("{$name}_id")->nullable($nullable);
+        $table->index(["{$name}_type", "{$name}_id"], $index);
+    }
+};

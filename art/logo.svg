@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Laravel Docket">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="144" height="144" rx="28" fill="url(#g)"/>
+  <!-- clipboard -->
+  <rect x="40" y="36" width="80" height="96" rx="10" fill="#ffffff" opacity="0.96"/>
+  <rect x="62" y="28" width="36" height="16" rx="6" fill="#1e293b"/>
+  <!-- thread lines: root, child, child -->
+  <circle cx="56" cy="64" r="5" fill="#3b82f6"/>
+  <rect x="68" y="60" width="40" height="8" rx="4" fill="#94a3b8"/>
+  <path d="M56 69 V88 H64" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="70" cy="88" r="4" fill="#f59e0b"/>
+  <rect x="80" y="84" width="28" height="8" rx="4" fill="#cbd5e1"/>
+  <path d="M56 93 V112 H64" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="70" cy="112" r="4" fill="#6b7280"/>
+  <rect x="80" y="108" width="20" height="8" rx="4" fill="#cbd5e1"/>
+</svg>

@@ -1,0 +1,17 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - src
+        - database
+        - tests/Fixtures
+    tmpDir: .phpstan.cache
+
+    ignoreErrors:
+        # HasProposals reads optional $proposable / $proposableFiles properties off the consuming model.
+        # Every analysed consumer (the test fixtures) declares them, so PHPStan sees the guard as redundant.
+        -
+            identifier: function.alreadyNarrowedType
+            path: src/Concerns/HasProposals.php
