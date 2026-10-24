@@ -84,3 +84,12 @@ it('indexes long values by key and matches booleans and nulls like the JSON quer
         ->and(Report::whereMeta('trace', null)->pluck('id')->all())->toBe([$plain->getKey()])
         ->and(Report::whereMeta('trace', '!=', null)->pluck('id')->all())->toBe([$long->getKey()]);
 });
+
+it('leaves numbers too large for the index column out of value_number', function () {
+    config()->set('docket.meta.index', true);
+
+    $report = Docket::report()->body('x')->meta(['imei' => '490154203237518', 'build' => 42])->create();
+
+    expect($report->metaIndex->firstWhere('key', 'imei')->value_number)->toBeNull()
+        ->and(Report::whereMeta('imei', '490154203237518')->count())->toBe(1);
+});

@@ -18,7 +18,7 @@ class NotificationSuppressed
     use Dispatchable;
 
     /**
-     * @param  string  $reason  muted | muted_for | preferences | quiet_hours | cooldown | ignored | disabled | no_channels
+     * @param  string  $reason  muted | muted_for | quiet_hours | cooldown | ignored | disabled | kind | deferred | no_channels
      * @param  array<string, mixed>  $context
      */
     public function __construct(

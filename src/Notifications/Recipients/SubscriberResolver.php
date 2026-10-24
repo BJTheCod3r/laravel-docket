@@ -70,12 +70,12 @@ class SubscriberResolver implements RecipientResolver
             ->filter();
 
         return $class::query()
-            ->where(function (Builder $query) use ($scopes, $report) {
+            ->where(function (Builder $query) use ($scopes, $event) {
                 $scopes->each(fn (array $scope) => $query->orWhere(fn (Builder $q) => $q
                     ->where('subscribable_type', $scope[0])
                     ->where('subscribable_id', (string) $scope[1])));
 
-                $query->orWhere(fn (Builder $q) => $q->forKind($report->kind));
+                $query->orWhere(fn (Builder $q) => $q->forKind($event->relevantReport()->kind));
             })
             ->with('subscriber')
             ->get();

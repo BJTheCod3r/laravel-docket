@@ -139,3 +139,21 @@ it('refuses to move a report to another parent', function () {
 
     expect(fn () => $reply->update(['parent_id' => $second->getKey()]))->toThrow(DocketException::class);
 });
+
+it('refuses a parent it cannot resolve', function () {
+    $root = Docket::report()->body('x')->create();
+    $root->delete();
+
+    Report::create(['description' => 'orphan', 'parent_id' => $root->getKey()]);
+})->throws(DocketException::class, 'does not exist');
+
+it('fixes root_id and depth at creation', function () {
+    $root = Docket::report()->body('x')->create();
+    $child = $root->comment('y');
+
+    $child->update(['depth' => 0]);
+})->throws(DocketException::class, 'fixed at creation');
+
+it('rejects an unregistered status at creation', function () {
+    Report::create(['description' => 'x', 'status' => 'bogus']);
+})->throws(\BJTheCod3r\Docket\Exceptions\InvalidStatusException::class);

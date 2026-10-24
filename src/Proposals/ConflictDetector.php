@@ -85,7 +85,7 @@ class ConflictDetector
     protected function normalise(mixed $value): mixed
     {
         // Snapshots store dates as JSON strings ("…000000Z"); compare both sides as UTC ISO-8601.
-        if ($value instanceof DateTimeInterface || (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', $value))) {
+        if ($value instanceof DateTimeInterface || (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/', $value))) {
             return Carbon::parse($value)->utc()->format(DATE_ATOM);
         }
 

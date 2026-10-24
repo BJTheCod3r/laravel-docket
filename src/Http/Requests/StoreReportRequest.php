@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BJTheCod3r\Docket\Http\Requests;
 
+use BJTheCod3r\Docket\Enums\ReportKind;
 use BJTheCod3r\Docket\Enums\Visibility;
 use BJTheCod3r\Docket\Facades\Docket;
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,7 +23,7 @@ class StoreReportRequest extends FormRequest
         return [
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'kind' => ['nullable', 'string', Rule::in(Docket::kinds()->all()->keys()->all())],
+            'kind' => ['nullable', 'string', Rule::in(Docket::kinds()->all()->except(ReportKind::Proposal->value)->keys()->all())],
             'visibility' => ['nullable', Rule::enum(Visibility::class)],
             'priority' => ['nullable', 'integer'],
             'meta' => ['nullable', 'array'],

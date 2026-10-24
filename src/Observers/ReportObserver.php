@@ -48,25 +48,28 @@ class ReportObserver
             ?? $kind->defaultVisibility
             ?? config('docket.reports.default_visibility', Visibility::Internal->value);
         $report->status ??= $kind->defaultStatus ?? Docket::statuses()->default()->key;
+        Docket::statuses()->get($report->status);
 
         if (empty($report->reference)) {
             $report->reference = $this->references->generate($report);
         }
 
         if ($report->parent_id !== null) {
-            if ($parent !== null) {
-                if ($parent->isLocked()) {
-                    throw new ReportLockedException("Report [{$parent->reference}] is locked; no further children may be added.");
-                }
+            if ($parent === null) {
+                throw new DocketException("Parent report [{$report->parent_id}] does not exist or is not accessible.");
+            }
 
-                $report->depth = $parent->depth + 1;
-                $report->root_id = $parent->root_id ?? $parent->getKey();
+            if ($parent->isLocked()) {
+                throw new ReportLockedException("Report [{$parent->reference}] is locked; no further children may be added.");
+            }
 
-                $maxDepth = (int) config('docket.reports.max_depth', 5);
+            $report->depth = $parent->depth + 1;
+            $report->root_id = $parent->root_id ?? $parent->getKey();
 
-                if ($report->depth > $maxDepth) {
-                    throw new MaxDepthExceededException("Report nesting exceeds the configured max depth of {$maxDepth}.");
-                }
+            $maxDepth = (int) config('docket.reports.max_depth', 5);
+
+            if ($report->depth > $maxDepth) {
+                throw new MaxDepthExceededException("Report nesting exceeds the configured max depth of {$maxDepth}.");
             }
         } else {
             $report->depth = 0;
@@ -98,7 +101,7 @@ class ReportObserver
             );
         }
 
-        if ($report->isDirty('parent_id')) {
+        if ($report->isDirty(['parent_id', 'root_id', 'depth'])) {
             throw new DocketException('A report cannot be moved to another parent; root_id and depth are fixed at creation.');
         }
 
@@ -160,7 +163,7 @@ class ReportObserver
      */
     public function forceDeleting(Report $report): void
     {
-        $report->children()->withTrashed()->get()->each->forceDelete();
+        Docket::rollup()->withoutRollup(fn () => $report->children()->withTrashed()->get()->each->forceDelete());
         $report->attachments()->get()->each->delete();
     }
 

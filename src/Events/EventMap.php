@@ -6,6 +6,7 @@ namespace BJTheCod3r\Docket\Events;
 
 use BJTheCod3r\Docket\Contracts\DocketEvent;
 use BJTheCod3r\Docket\Exceptions\DocketException;
+use BJTheCod3r\Docket\Notifications\NotificationPipeline;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 
@@ -37,6 +38,8 @@ class EventMap
     {
         $class = $this->resolve($event);
         $instance = new $class(...$arguments);
+
+        $this->container->make(NotificationPipeline::class)->capture($instance);
 
         // Resolve lazily so Event::fake() (which swaps the binding) is honoured.
         $this->container->make(Dispatcher::class)->dispatch($instance);

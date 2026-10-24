@@ -50,3 +50,12 @@ it('resolves default channels with wildcard prefixes', function () {
 class OurStatusChanged extends StatusChanged
 {
 }
+
+it('keeps a shipped kind rollup when overriding other options', function () {
+    config()->set('docket.kinds', ['comment' => ['label' => 'Note']]);
+    Docket::kind('resolution', ['label' => 'Fix']);
+
+    expect(Docket::kinds()->get('comment')->label)->toBe('Note')
+        ->and(Docket::kinds()->get('comment')->rollup)->toBe('none')
+        ->and(Docket::kinds()->get('resolution')->rollup)->toBe('latest_child');
+});
