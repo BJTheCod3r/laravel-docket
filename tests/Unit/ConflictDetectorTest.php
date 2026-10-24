@@ -14,3 +14,10 @@ it('compares values loosely but safely', function () {
         ->and($detector->same('a', 'b'))->toBeFalse()
         ->and($detector->same(\Carbon\Carbon::parse('2026-01-01'), '2026-01-01T00:00:00+00:00'))->toBeTrue();
 });
+
+it('compares text that starts with a date as text', function () {
+    $detector = app(ConflictDetector::class);
+
+    expect($detector->same('2024-05-01 12:00 outage postmortem', '2024-05-01 12:00 outage postmortem'))->toBeTrue()
+        ->and($detector->same('2024-05-01 12:00 outage', '2024-05-01 12:00 incident'))->toBeFalse();
+});

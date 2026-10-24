@@ -156,9 +156,11 @@ class FilesystemDriver implements AttachmentDriver
     {
         $source = Storage::disk($fromDisk);
 
-        if (($fromDisk === $toDisk && $fromPath === $toPath) || ! $source->exists($fromPath)) {
+        if (($fromDisk === $toDisk && $fromPath === $toPath) || (! $source->exists($fromPath) && Storage::disk($toDisk)->exists($toPath))) {
             return;
         }
+
+        throw_unless($source->exists($fromPath), AttachmentException::class, "Could not find [{$fromDisk}:{$fromPath}].");
 
         if ($fromDisk === $toDisk) {
             $source->move($fromPath, $toPath);

@@ -148,3 +148,14 @@ class RollupTransitionDenyPolicy
         return false;
     }
 }
+
+it('does not roll children up into a parent being force-deleted', function () {
+    $root = Docket::report()->body('incident')->create();
+    $root->reply('a', kind: 'report');
+    $root->reply('b', kind: 'report', status: 'closed');
+
+    \Illuminate\Support\Facades\Event::fake([\BJTheCod3r\Docket\Events\StatusChanged::class]);
+    $root->fresh()->forceDelete();
+
+    \Illuminate\Support\Facades\Event::assertNotDispatched(\BJTheCod3r\Docket\Events\StatusChanged::class);
+});

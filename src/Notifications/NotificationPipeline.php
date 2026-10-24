@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
+use WeakMap;
 
 /**
  * 1. `about` mutes                    → drop stops here, before recipients are even resolved
@@ -60,6 +61,14 @@ class NotificationPipeline
 
     protected bool $disabled = false;
 
+    /**
+     * Events raised inside withoutNotifications(); they dispatch after commit,
+     * by which time the flag may already be restored.
+     *
+     * @var WeakMap<DocketEvent, true>
+     */
+    protected WeakMap $silenced;
+
     public function __construct(
         protected Container $container,
         protected SuppressionGate $gate,
@@ -67,7 +76,9 @@ class NotificationPipeline
         protected QuietHours $quietHours,
         protected DigestStore $digests,
         protected Cache $cache,
-    ) {}
+    ) {
+        $this->silenced = new WeakMap;
+    }
 
     public function withoutNotifications(callable $callback): mixed
     {
@@ -81,12 +92,19 @@ class NotificationPipeline
         }
     }
 
+    public function capture(DocketEvent $event): void
+    {
+        if ($this->disabled) {
+            $this->silenced[$event] = true;
+        }
+    }
+
     public function handle(DocketEvent $event): void
     {
         $key = $event::key();
         $report = $event->relevantReport();
 
-        if ($this->disabled || ! config('docket.notifications.enabled', true)) {
+        if ($this->disabled || isset($this->silenced[$event]) || ! config('docket.notifications.enabled', true)) {
             $this->suppress($event, null, 'disabled');
 
             return;

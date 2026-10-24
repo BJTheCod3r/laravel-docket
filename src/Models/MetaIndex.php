@@ -46,7 +46,7 @@ class MetaIndex extends Model
             ->map(fn ($value, $key) => [
                 'key' => (string) $key,
                 'value_string' => is_bool($value) || Str::length((string) $value) > self::MAX_STRING_LENGTH ? null : (string) $value,
-                'value_number' => is_numeric($value) ? (float) $value : null,
+                'value_number' => is_numeric($value) && abs((float) $value) < 1e14 ? (float) $value : null,
                 'value_bool' => is_bool($value) ? $value : null,
             ])
             ->values()

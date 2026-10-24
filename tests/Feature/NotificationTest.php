@@ -459,3 +459,13 @@ it('keeps resolvers registered before Docket::fake()', function () {
 
     Docket::assertNotified($watcher, ReportNotification::class);
 });
+
+it('honours withoutNotifications inside an outer transaction', function () {
+    $owner = $this->user('Owner');
+
+    \Illuminate\Support\Facades\DB::transaction(fn () => Docket::notifications()->withoutNotifications(
+        fn () => Docket::report()->to($owner)->body('x')->create()
+    ));
+
+    Notification::assertNotSentTo($owner, ReportNotification::class);
+});

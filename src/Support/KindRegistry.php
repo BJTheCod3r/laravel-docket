@@ -15,6 +15,13 @@ class KindRegistry
 
     protected bool $booted = false;
 
+    /** @var array<string, string> */
+    protected const SHIPPED_ROLLUPS = [
+        ReportKind::Comment->value => 'none',
+        ReportKind::Resolution->value => 'latest_child',
+        ReportKind::Proposal->value => 'none',
+    ];
+
     /**
      * @param  array<string, mixed>  $options  label, rollup, default_status, default_visibility, notifies
      */
@@ -22,7 +29,7 @@ class KindRegistry
     {
         $this->boot();
 
-        return $this->kinds[$key] = Kind::fromArray($key, $options);
+        return $this->kinds[$key] = Kind::fromArray($key, $options + ['rollup' => self::SHIPPED_ROLLUPS[$key] ?? null]);
     }
 
     public function has(string $key): bool
@@ -60,16 +67,10 @@ class KindRegistry
 
         $this->booted = true;
 
-        $rollups = [
-            ReportKind::Comment->value => 'none',
-            ReportKind::Resolution->value => 'latest_child',
-            ReportKind::Proposal->value => 'none',
-        ];
-
         $this->kinds = collect(ReportKind::cases())
-            ->mapWithKeys(fn (ReportKind $case) => [$case->value => Kind::fromArray($case->value, ['rollup' => $rollups[$case->value] ?? null])])
-            ->merge(collect((array) config('docket.kinds', []))
-                ->mapWithKeys(fn ($options, $key) => [$key => Kind::fromArray((string) $key, (array) $options)]))
+            ->mapWithKeys(fn (ReportKind $case) => [$case->value => []])
+            ->merge((array) config('docket.kinds', []))
+            ->mapWithKeys(fn ($options, $key) => [$key => Kind::fromArray((string) $key, (array) $options + ['rollup' => self::SHIPPED_ROLLUPS[$key] ?? null])])
             ->all();
     }
 }

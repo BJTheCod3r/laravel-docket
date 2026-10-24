@@ -44,7 +44,7 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->text('description')->nullable();
             $table->json('meta')->nullable();
-            $table->string('tenant_id')->nullable()->index();
+            $table->string((string) config('docket.tenancy.column', 'tenant_id'))->nullable()->index();
             $table->smallInteger('priority')->nullable();
             $table->timestamp('due_at')->nullable();
             $table->timestamp('resolved_at')->nullable();
@@ -252,9 +252,9 @@ return new class extends Migration
 
         if ($constrained) {
             $table->foreign($column)->references('id')->on($this->prefix.$references)->cascadeOnDelete();
-        } else {
-            $table->index($column);
         }
+
+        $table->index($column);
     }
 
     protected function morph(Blueprint $table, string $name, bool $nullable = true, ?string $index = null): void
