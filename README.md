@@ -31,7 +31,7 @@ php artisan vendor:publish --tag=docket-migrations
 php artisan migrate
 ```
 
-Requires PHP 8.2+ and Laravel 11, 12 or 13.
+Requires PHP 8.2+ and Laravel 12 or 13.
 
 ## Quick start
 
